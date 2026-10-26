@@ -1,0 +1,12 @@
+# Sample sshd_config that intentionally contains insecure settings (do not use in production)
+Port 22
+PermitRootLogin yes
+PasswordAuthentication yes
+PermitEmptyPasswords no
+X11Forwarding yes
+MaxAuthTries 10
+AllowTcpForwarding yes
+Protocol 2
+KexAlgorithms diffie-hellman-group1-sha1
+Ciphers aes128-cbc,3des-cbc
+MACs hmac-md5,hmac-sha1

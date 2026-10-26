@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Only read the source code; the workflow does not need any write permissions
+permissions:
+  contents: read
+
+env:
+  # CI has no terminal: disable colours so the log stays clean and greppable
+  SECAI_NO_COLOR: "1"
+
+jobs:
+  test:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+      - name: Offline smoke test (no API key required)
+        run: |
+          python secai.py --version
+          python secai.py --dry-run analyze-log samples/access.log --batch-size 3
+          python secai.py --dry-run check-config samples/firewall.rules
+          python secai.py --dry-run cve CVE-2024-1234
+          python secai.py scan-url "http://10.0.0.5/x.php?file=../../etc/passwd" --no-ai --json \
+            | python -m json.tool > /dev/null
+
+      - name: --json output must be valid JSON
+        run: |
+          python secai.py --dry-run --json analyze-log samples/access.log \
+            | python -m json.tool > /dev/null
+          python secai.py --json scan-url "https://shop.example.com/products/42" --no-ai \
+            | python -m json.tool > /dev/null
+
+      - name: --fail-on must exit with code 10
+        run: |
+          set +e
+          python secai.py scan-url "https://example.com/.env" --no-ai --fail-on high
+          code=$?
+          set -e
+          echo "exit code: $code"
+          test "$code" -eq 10
+
+  docker:
+    name: Docker build and container smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t secai-cli:ci .
+
+      - name: Run inside the container (offline)
+        run: |
+          docker run --rm secai-cli:ci --version
+          docker run --rm secai-cli:ci scan-url "https://example.com/.env" --no-ai --json \
+            | python -m json.tool > /dev/null

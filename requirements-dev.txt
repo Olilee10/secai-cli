@@ -1,0 +1,5 @@
+# --- Development/test dependencies (CI installs these as well) ---
+iniconfig==2.3.0
+packaging==26.3
+pluggy==1.6.0
+pytest==9.1.1

@@ -1,0 +1,17 @@
+# Files that do not need to be sent when building the image
+# (smaller build context, avoids leaking secrets)
+.git/
+.github/
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+*.md
+.env
+.env.*
+!.env.example
